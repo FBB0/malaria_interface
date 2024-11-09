@@ -32,7 +32,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Load the YOLO model
-model = YOLO('best_yolo.pt')
+model = YOLO('best_yolo.pt')#This is not actually our best model, it will be changed after the competition ends
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):

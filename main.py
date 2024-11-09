@@ -32,11 +32,15 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Load the YOLO model
-model = YOLO('best.pt')
+model = YOLO('best_yolo.pt')
 
 @app.get("/", response_class=HTMLResponse)
 async def read_index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
+
+@app.get("/model-info", response_class=HTMLResponse)
+async def read_index(request: Request):
+    return templates.TemplateResponse("model-info.html", {"request": request})
 
 @app.post("/upload_image/", response_class=HTMLResponse)
 async def upload_image(request: Request, file: UploadFile = File(...)):

@@ -34,16 +34,20 @@
             {% if show_results %}
                 <h2>Detection Results</h2>
                 <img src="data:image/jpeg;base64,{{ img_data|safe }}" alt="Uploaded Image with Detections">
-                <div class="top-detections">
-                    {% set sorted_detections = detections|sort(attribute='confidence', reverse=True) %}
-                    {% for detection in sorted_detections[:4] %}
-                        <div class="top-detection-item">
-                            <span>{{ detection.label }}</span><br>
-                            <img src="data:image/jpeg;base64,{{ detection.thumbnail|safe }}" alt="{{ detection.label }}"><br>
-                            <span>{{ detection.confidence }}%</span>
-                        </div>
-                    {% endfor %}
-                </div>
+                {% set sorted_detections = detections|sort(attribute='confidence', reverse=True) %}
+                {% if sorted_detections|length == 0 %}
+                    <p>No Trophozoites detected, thus most likely a negative image. This could be due to image quality or limitations of the model.</p>
+                {% else %}
+                    <div class="top-detections">
+                        {% for detection in sorted_detections[:4] %}
+                            <div class="top-detection-item">
+                                <span>{{ detection.label }}</span><br>
+                                <img src="data:image/jpeg;base64,{{ detection.thumbnail|safe }}" alt="{{ detection.label }}"><br>
+                                <span>{{ detection.confidence }}%</span>
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
             {% else %}
                 <h2>Sample Detection</h2>
                 <img src="/static/images/sample_image.jpg" alt="Sample Image">

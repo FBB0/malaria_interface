@@ -90,8 +90,7 @@ python-dateutil==2.9.0.post0
     #   pandas
 pytz==2024.2
     # via pandas
-pywin32==308
-    # via docker
+
 pyyaml==6.0.2
     # via ultralytics
 requests==2.32.3

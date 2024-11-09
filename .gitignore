@@ -1,2 +1,3 @@
-*.pt
+yolov5s.pt
+best11m.pt
 __pycache__

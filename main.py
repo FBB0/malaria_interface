@@ -1,5 +1,5 @@
 # Directory Structure:
-# malaria_detection_app/
+# malaria_interface/
 # ├── main.py
 # ├── templates/
 # │   └── index.html
@@ -69,7 +69,7 @@ async def upload_image(request: Request, file: UploadFile = File(...)):
 
 def draw_bounding_boxes(image, results):
     """
-    Draws bounding boxes and returns the image and detections.
+    Draws bounding boxes and returns the image with boxes and cropped thumbnails.
     """
     detections = []
     image_np = np.array(image)
@@ -80,10 +80,18 @@ def draw_bounding_boxes(image, results):
             confidence = box.conf.item()
             label = model.names[int(box.cls.item())]
 
+            # Create a cropped thumbnail of the detected area
+            cropped_image = image_np[y_min:y_max, x_min:x_max]
+            cropped_pil = Image.fromarray(cropped_image)
+            buffered = io.BytesIO()
+            cropped_pil.save(buffered, format="JPEG")
+            thumbnail_str = base64.b64encode(buffered.getvalue()).decode()
+
             # Append detection info
             detections.append({
                 "label": label,
-                "confidence": f"{confidence:.2f}"
+                "confidence": f"{confidence:.2f}",
+                "thumbnail": thumbnail_str
             })
 
             # Draw bounding box
@@ -95,6 +103,7 @@ def draw_bounding_boxes(image, results):
     # Convert back to PIL Image
     image_with_boxes = Image.fromarray(image_np)
     return image_with_boxes, detections
+
 
 if __name__ == "__main__":
     import uvicorn

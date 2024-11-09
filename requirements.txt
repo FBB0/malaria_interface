@@ -6,9 +6,9 @@ pydantic==2.9.2
 starlette==0.41.2
 
 # ML and Image Processing
-torch==2.0.1+cpu  # CPU-only version to avoid CUDA dependencies
+torch==2.0.1  # Older, more stable version
 ultralytics==8.3.28
-opencv-python  # Removed version to resolve conflict
+opencv-python
 numpy==1.24.3
 pillow==9.2.0
 scipy==1.10.1

@@ -3,6 +3,7 @@ import Header from '../components/Header';
 import UploadSection from '../components/UploadSection';
 import ModelSteps from '../components/ModelSteps';
 import DetectionResults from '../components/DetectionResults';
+import { DetectionInfoPopover } from '../components/DetectionInfoPopover'
 import { apiService } from '../services/api';
 
 interface Detection {
@@ -13,6 +14,7 @@ interface Detection {
 
 interface Results {
   img_data: string;
+  base_img_data: string;
   detections: Detection[];
   speed?: string;
 }
@@ -21,7 +23,8 @@ export default function Home() {
   const [results, setResults] = useState<Results | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedSample, setSelectedSample] = useState<string | null>(null);
+  const [showSampleMenu, setShowSampleMenu] = useState<boolean>(false);
+  const samples = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]; // Add the sample numbers you have available
   const handleFileUpload = async (file: File) => {
     setLoading(true);
     setError(null);
@@ -36,14 +39,15 @@ export default function Home() {
     }
   };
 
-  const handleSampleSelect = async () => {
-    // This would typically load a pre-selected sample image
+  const handleSampleSelect = async (sampleNumber: number) => {
     try {
-      const response = await fetch('/src/assets/sample_image.jpg');
+      setShowSampleMenu(false); // Close menu after selection
+      const samplePath = `/src/assets/samples/sample_${sampleNumber}.jpg`;
+      const response = await fetch(samplePath);
       const blob = await response.blob();
-      const file = new File([blob], 'sample_image.jpg', { type: 'image/jpeg' });
+      const file = new File([blob], `sample_${sampleNumber}.jpg`, { type: 'image/jpeg' });
       await handleFileUpload(file);
-      setSelectedSample('sample_image.jpg');
+      //setSelectedSample(`sample_${sampleNumber}.jpg`);
     } catch (err) {
       setError('Failed to load sample image');
       console.error('Error:', err);
@@ -58,12 +62,12 @@ export default function Home() {
     }}>
       <Header />
       
-      <main className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <main className="container mx-auto px-4 py-8 sm:py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
           {/* Left Column */}
-          <div className="space-y-16">
+          <div className="space-y-8 sm:space-y-16">
             <div>
-              <h1 className="text-3xl font-semibold text-gray-800 mb-4 mt-8">
+              <h1 className="text-2xl sm:text-3xl font-semibold text-gray-800 mb-2 sm:mb-4 mt-4 sm:mt-8">
                 Welcome to the Malaria Detection App
               </h1>
               <p className="text-gray-600">
@@ -74,7 +78,11 @@ export default function Home() {
 
             <UploadSection
               onFileUpload={handleFileUpload}
-              onSampleSelect={handleSampleSelect}
+              onSampleSelect={() => setShowSampleMenu(true)}
+              showSampleMenu={showSampleMenu}
+              onCloseSampleMenu={() => setShowSampleMenu(false)}
+              samples={samples}
+              onSampleNumberSelect={handleSampleSelect}
             />
 
             <ModelSteps />
@@ -99,7 +107,7 @@ export default function Home() {
               <div className="flex items-center justify-center h-64">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gray-900"></div>
               </div>
-            ) : results?.img_data ? (
+            ) : results?.base_img_data ? (
               <div className="space-y-6">
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <img
@@ -112,15 +120,11 @@ export default function Home() {
                 <div>
                   <div className="flex items-center gap-2 mb-4">
                     <h3 className="text-lg font-semibold">Found malaria parasites</h3>
-                    <button
-                      className="text-gray-400 hover:text-gray-600"
-                      title="Detection information"
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                          d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                    </button>
+                    <DetectionInfoPopover 
+                      stage={results.detections[0]?.label || "Unknown"}
+                      confidence={Number(results.detections[0]?.confidence) || 0}
+                      thumbnail={results.detections[0]?.thumbnail}
+                    />
                   </div>
 
                   {results.detections.length > 0 ? (
@@ -131,7 +135,9 @@ export default function Home() {
                             <img
                               src={`data:image/jpeg;base64,${detection.thumbnail}`}
                               alt={detection.label}
-                              className="w-full h-full object-cover rounded-full border-2 border-green-500"
+                              className={`w-full h-full object-cover rounded-full border-2 ${
+                                detection.label === 'WBC' ? 'border-green-500' : 'border-red-500'
+                              }`}
                             />
                           </div>
                           <div className="font-medium text-sm">{detection.label}</div>

@@ -49,26 +49,39 @@ async def upload_image(file: UploadFile = File(...)):
         contents = await file.read()
         image = Image.open(io.BytesIO(contents)).convert("RGB")
 
+        # Convert original image to base64 before drawing boxes
+        buffered = io.BytesIO()
+        image.save(buffered, format="JPEG")
+        base_img_str = base64.b64encode(buffered.getvalue()).decode()
+
+        # Store original image as numpy array for thumbnails
+        base_image_np = np.array(image)
+
         # Perform YOLO detection
         results = model.predict(image, save=False, stream=False)
+        
+        # Get inference speed from results
+        speed = results[0].speed['inference']  # Speed in milliseconds
 
         # Draw bounding boxes on the image
-        image_with_boxes, detections = draw_bounding_boxes(image, results)
+        image_with_boxes, detections = draw_bounding_boxes(image, base_image_np, results)
 
-        # Convert image to base64 for frontend
+        # Convert annotated image to base64 for frontend
         buffered = io.BytesIO()
         image_with_boxes.save(buffered, format="JPEG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
 
         return JSONResponse({
             "img_data": img_str,
-            "detections": detections
+            "base_img_data": base_img_str,
+            "detections": detections,
+            "speed": f"{round(speed, 2)}ms"
         })
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-def draw_bounding_boxes(image, results):
+def draw_bounding_boxes(image, base_image_np, results):
     """
     Draws bounding boxes and returns the image with boxes and cropped thumbnails.
     """
@@ -81,8 +94,8 @@ def draw_bounding_boxes(image, results):
             confidence = box.conf.item()
             label = model.names[int(box.cls.item())]
 
-            # Create a cropped thumbnail of the detected area
-            cropped_image = image_np[y_min:y_max, x_min:x_max]
+            # Create a cropped thumbnail from the base image
+            cropped_image = base_image_np[y_min:y_max, x_min:x_max]
             cropped_pil = Image.fromarray(cropped_image)
             buffered = io.BytesIO()
             cropped_pil.save(buffered, format="JPEG")
@@ -91,15 +104,22 @@ def draw_bounding_boxes(image, results):
             # Append detection info
             detections.append({
                 "label": label,
-                "confidence": f"{confidence:.2f}",
+                "confidence": f"{confidence * 100:.2f}",
                 "thumbnail": thumbnail_str
             })
 
+            # Set color based on label
+            color = (0, 255, 0) if label == "WBC" else (255, 0, 0)  # Green for WBC, Red for trophozoite
+
             # Draw bounding box
-            cv2.rectangle(image_np, (x_min, y_min), (x_max, y_max), (0, 255, 0), 2)
+            cv2.rectangle(image_np, (x_min, y_min), (x_max, y_max), color, 2)
             # Put label
-            cv2.putText(image_np, f"{label} {confidence:.2f}", (x_min, y_min - 10),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.9, (0, 255, 0), 2)
+            # Draw text with contour effect
+            text = f"{label} {confidence * 100:.2f}%"
+            cv2.putText(image_np, text, (x_min, y_min - 10), 
+                       cv2.FONT_HERSHEY_SIMPLEX, 1.8, (0, 0, 0), 6) # Black outline
+            cv2.putText(image_np, text, (x_min, y_min - 10),
+                       cv2.FONT_HERSHEY_SIMPLEX, 1.8, color, 3) # Colored text
 
     # Convert back to PIL Image
     image_with_boxes = Image.fromarray(image_np)

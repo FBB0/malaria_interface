@@ -5,6 +5,7 @@ import ModelSteps from '../components/ModelSteps';
 import DetectionResults from '../components/DetectionResults';
 import { DetectionInfoPopover } from '../components/DetectionInfoPopover'
 import { apiService } from '../services/api';
+import Footer from '../components/Footer';
 
 interface Detection {
   label: string;
@@ -160,6 +161,7 @@ export default function Home() {
           </div>
         </div>
       </main>
+      <Footer />
     </div>
   );
 }

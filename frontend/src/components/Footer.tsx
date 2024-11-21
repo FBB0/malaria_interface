@@ -3,7 +3,7 @@ import { FaLinkedin, FaInstagram, FaGithub } from 'react-icons/fa';
 
 const Footer: React.FC = () => {
   return (
-    <footer className="bg-[#333333] text-white py-8 fixed bottom-0 left-0 right-0">
+    <footer className="bg-[#333333] text-white py-8 bottom-0 left-0 right-0"> {/* Removed 'fixed' class */}
       <div className="container mx-auto px-4">
         <div className="flex flex-col md:flex-row justify-between items-center">
           {/* Social Media Links */}

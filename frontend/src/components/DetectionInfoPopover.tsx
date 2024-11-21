@@ -40,19 +40,19 @@ export const DetectionInfoPopover = ({ stage, confidence, thumbnail }: Detection
               <div className="flex items-center">
                 <div className="w-12 h-[2px] bg-gray-400"></div>
                 <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-gray-400"></div>
-                <span className="ml-2 text-gray-600">Stage of malaria</span>
+                <span className="ml-2 text-gray-600">Cell class</span>
               </div>
               
               <div className="flex items-center">
                 <div className="w-12 h-[2px] bg-gray-400"></div>
                 <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-gray-400"></div>
-                <span className="ml-2 text-gray-600">Spotted malaria in<br/>blood sample</span>
+                <span className="ml-2 text-gray-600">Detected cell</span>
               </div>
               
               <div className="flex items-center">
                 <div className="w-12 h-[2px] bg-gray-400"></div>
                 <div className="w-0 h-0 border-t-[6px] border-t-transparent border-b-[6px] border-b-transparent border-l-[8px] border-l-gray-400"></div>
-                <span className="ml-2 text-gray-600">Confidence level</span>
+                <span className="ml-2 text-gray-600">Confidence</span>
               </div>
             </div>
           </div>

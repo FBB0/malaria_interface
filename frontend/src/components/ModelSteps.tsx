@@ -6,7 +6,7 @@ export default function ModelSteps() {
     ];
   
     return (
-      <div className="mt-8">
+      <div className="mt-205">
         <h2 className="text-xl font-semibold mb-4">Learn how it works</h2>
         <p className="text-gray-600 mb-4">
           Click the buttons below to explore specific parts of the model.

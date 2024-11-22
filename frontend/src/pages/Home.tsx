@@ -2,7 +2,6 @@ import { useState } from 'react';
 import Header from '../components/Header';
 import UploadSection from '../components/UploadSection';
 import ModelSteps from '../components/ModelSteps';
-import DetectionResults from '../components/DetectionResults';
 import { DetectionInfoPopover } from '../components/DetectionInfoPopover'
 import { apiService } from '../services/api';
 import Footer from '../components/Footer';
@@ -19,6 +18,7 @@ interface Results {
   detections: Detection[];
   speed?: string;
 }
+
 
 export default function Home() {
   const [results, setResults] = useState<Results | null>(null);
@@ -42,13 +42,14 @@ export default function Home() {
 
   const handleSampleSelect = async (sampleNumber: number) => {
     try {
-      setShowSampleMenu(false); // Close menu after selection
-      const samplePath = `/src/assets/samples/sample_${sampleNumber}.jpg`;
+      setShowSampleMenu(false);
+      const samplePath = import.meta.env.DEV 
+        ? `/src/assets/samples/sample_${sampleNumber}.jpg`
+        : `/assets/samples/sample_${sampleNumber}.jpg`;
       const response = await fetch(samplePath);
       const blob = await response.blob();
       const file = new File([blob], `sample_${sampleNumber}.jpg`, { type: 'image/jpeg' });
       await handleFileUpload(file);
-      //setSelectedSample(`sample_${sampleNumber}.jpg`);
     } catch (err) {
       setError('Failed to load sample image');
       console.error('Error:', err);

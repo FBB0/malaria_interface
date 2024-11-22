@@ -9,18 +9,19 @@ export interface Detection {
 
 export interface DetectionResponse {
   img_data: string;
+  base_img_data: string; // Add this line
   detections: Detection[];
+  speed: string;
 }
 
 // Create axios instance with default config
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: '/api',  // Keep this simple - the proxy will handle the routing
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// API methods
 export const apiService = {
   uploadImage: async (file: File): Promise<DetectionResponse> => {
     const formData = new FormData();

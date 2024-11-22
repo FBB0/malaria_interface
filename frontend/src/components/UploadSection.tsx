@@ -34,7 +34,7 @@ export default function UploadSection({
 
   // Handle clicks outside the menu
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
+    const handleClickOutside = () => {  // Remove the event parameter
       if (showSampleMenu) {
         onCloseSampleMenu();
       }

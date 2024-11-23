@@ -26,30 +26,22 @@ app = FastAPI()
 
 from fastapi.middleware.cors import CORSMiddleware
 
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "https://malaria-interface.onrender.com",
-        "http://localhost:5173",
+        "https://malaria-interface.onrender.com",  # Production frontend
+        "http://localhost:5173",  # Local development
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
-    expose_headers=["*"],
 )
 
-@app.options("/upload_image/")
-async def options_upload():
-    return {"message": "OK"}
-# Add debug endpoint
-@app.get("/debug/cors")
-async def debug_cors():
-    return {
-        "cors_settings": {
-            "origins": app.middleware_stack._middlewares[0].options["allow_origins"],
-            "methods": app.middleware_stack._middlewares[0].options["allow_methods"],
-        }
-    }
+# Add a health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy", "environment": "production"}
 
 # Initialize YOLO model
 try:

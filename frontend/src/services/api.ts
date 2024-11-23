@@ -13,12 +13,17 @@ export interface DetectionResponse {
   speed: string;
 }
 
-// Production URL for the backend
-const baseURL = 'https://epoch-malaria-detection.onrender.com';
+// Use environment-specific base URL
+const baseURL = import.meta.env.PROD 
+  ? 'https://epoch-malaria-detection.onrender.com'  // Production backend
+  : 'http://localhost:8000';  // Local development
 
 const api = axios.create({
   baseURL,
-  timeout: 60000,
+  timeout: 120000,  // 2 minutes timeout for production
+  headers: {
+    'Accept': 'application/json',
+  }
 });
 
 export const apiService = {
@@ -27,32 +32,26 @@ export const apiService = {
     formData.append('file', file);
 
     try {
-      console.log('Uploading to:', `${baseURL}/upload_image/`); // Debug log
+      console.log('Environment:', import.meta.env.MODE);
+      console.log('Uploading to:', `${baseURL}/upload_image/`);
       
       const response = await api.post('/upload_image/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-          'Accept': 'application/json',
+        },
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total!);
+          console.log('Upload progress:', percentCompleted + '%');
         },
       });
 
-      if (!response.data) {
-        throw new Error('No response data received');
-      }
-
       return response.data;
     } catch (error) {
-      console.error('Upload Error Details:', {
-        error,
-        isAxiosError: axios.isAxiosError(error),
-        response: axios.isAxiosError(error) ? error.response?.data : null,
-      });
-
-      if (axios.isAxiosError(error)) {
-        const message = error.response?.data?.detail || error.message;
-        throw new Error(`Upload failed: ${message}`);
+      console.error('Upload failed:', error);
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(`Server error: ${error.response.data.detail || error.message}`);
       }
-      throw new Error('Network error or server is not responding');
+      throw new Error('Connection failed. Please try again later.');
     }
   },
 };

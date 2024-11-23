@@ -30,11 +30,13 @@ export default function Home() {
     setLoading(true);
     setError(null);
     try {
+      console.log('Starting upload for file:', file.name); // Debug log
       const data = await apiService.uploadImage(file);
+      console.log('Upload successful:', data); // Debug log
       setResults(data);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
-      console.error('Error:', err);
+      console.error('Upload Error:', err); // Debug log
+      setError(err instanceof Error ? err.message : 'An error occurred during upload');
     } finally {
       setLoading(false);
     }

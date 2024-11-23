@@ -14,16 +14,17 @@ export interface DetectionResponse {
   speed: string;
 }
 
-// Create axios instance with default config
+// import axios, { AxiosResponse } from 'axios';
+
 const baseURL = import.meta.env.PROD 
-  ? 'https://epoch-malaria-detection.onrender.com'
-  : '/api';
+? 'https://epoch-malaria-detection.onrender.com'
+: '/api';
 
 const api = axios.create({
-  baseURL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+baseURL,
+headers: {
+  'Content-Type': 'application/json',
+},
 });
 
 export const apiService = {
@@ -32,22 +33,36 @@ export const apiService = {
     formData.append('file', file);
 
     try {
-      // Remove the '/api' prefix in production
-      const endpoint = import.meta.env.PROD ? '/upload_image/' : '/api/upload_image/';
-      const response: AxiosResponse<DetectionResponse> = await api.post(endpoint, formData, {
+      console.log('Uploading to:', baseURL); // Debug log
+      
+      const response: AxiosResponse<DetectionResponse> = await api.post('/upload_image/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        // Add timeout and better error handling
+        timeout: 30000,
+        validateStatus: (status) => status < 500,
       });
+
+      if (!response.data) {
+        throw new Error('No data received from server');
+      }
+
+      console.log('Response:', response.data); // Debug log
       return response.data;
     } catch (error) {
-      console.error('API Error:', error);  // Better error logging
+      console.error('Upload Error Details:', {
+        error,
+        isAxiosError: axios.isAxiosError(error),
+        response: axios.isAxiosError(error) ? error.response?.data : null,
+      });
+
       if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.detail || 'Error uploading image');
+        const message = error.response?.data?.detail || error.message || 'Error uploading image';
+        throw new Error(`Upload failed: ${message}`);
       }
       throw new Error('Error uploading image');
     }
   },
 };
-
 export default apiService;

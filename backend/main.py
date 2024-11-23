@@ -24,17 +24,29 @@ import os
 
 app = FastAPI()
 
-# CORS middleware
+# Update CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
         "https://malaria-interface.onrender.com",
+        "*"  # Temporarily allow all origins for testing
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
+
+# Add debug endpoint
+@app.get("/debug/cors")
+async def debug_cors():
+    return {
+        "cors_settings": {
+            "origins": app.middleware_stack._middlewares[0].options["allow_origins"],
+            "methods": app.middleware_stack._middlewares[0].options["allow_methods"],
+        }
+    }
 
 # Initialize YOLO model
 try:

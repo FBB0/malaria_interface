@@ -16,11 +16,11 @@ export interface DetectionResponse {
 
 const baseURL = import.meta.env.PROD 
   ? 'https://epoch-malaria-detection.onrender.com'
-  : 'http://localhost:8000';  // Changed from '/api' to direct localhost URL
+  : 'http://localhost:8000';  // Direct connection to backend in development
 
 const api = axios.create({
   baseURL,
-  timeout: 30000,
+  timeout: 60000,  // Increased timeout for large images
 });
 
 export const apiService = {
@@ -29,18 +29,30 @@ export const apiService = {
     formData.append('file', file);
 
     try {
+      console.log('Uploading to:', `${baseURL}/upload_image/`); // Debug log
+      
       const response = await api.post('/upload_image/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+          console.log('Upload progress:', progressEvent); // Debug log
+        },
       });
+
+      console.log('Upload response:', response); // Debug log
       return response.data;
     } catch (error) {
-      console.error('Upload Error:', error);
-      if (axios.isAxiosError(error)) {
-        throw new Error(error.response?.data?.detail || 'Error uploading image');
+      console.error('Upload Error Details:', {
+        error,
+        isAxiosError: axios.isAxiosError(error),
+        response: axios.isAxiosError(error) ? error.response?.data : null,
+      });
+
+      if (axios.isAxiosError(error) && error.response) {
+        throw new Error(`Upload failed: ${error.response.data.detail || error.message}`);
       }
-      throw new Error('Error uploading image');
+      throw new Error('Network error or server is not responding');
     }
   },
 };

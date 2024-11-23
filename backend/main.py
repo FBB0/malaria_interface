@@ -26,16 +26,9 @@ import base64
 
 app = FastAPI()
 
-# Add CORS middleware
-from fastapi.middleware.cors import CORSMiddleware
-
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",  # Local development
-        "https://malaria-interface.onrender.com",  # Your frontend Render URL
-        "https://epoch-malaria-detection.onrender.com"  # Your backend URL
-    ],
+    allow_origins=["*"],  # Temporarily allow all origins for testing
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,6 +41,14 @@ except Exception as e:
     model = None
 
 # API endpoints
+
+# Add a root endpoint for health checks
+@app.get("/")
+async def root():
+    return {"status": "healthy"}
+
+
+
 @app.post("/api/upload_image/")
 async def upload_image(file: UploadFile = File(...)):
     try:
@@ -130,14 +131,18 @@ def draw_bounding_boxes(image, base_image_np, results):
     image_with_boxes = Image.fromarray(image_np)
     return image_with_boxes, detections
 
-
-
 if __name__ == "__main__":
-
-    import os
     import uvicorn
-    port = int(os.environ.get("PORT", 8000))  # Default to 8000 if PORT isn't set
-    uvicorn.run("main:app", host="0.0.0.0", port=port)
-
-
-
+    import os
+    
+    # Get port from environment variable
+    port = int(os.environ.get("PORT", 8000))
+    
+    print(f"Starting server on port {port}")  # Add this for debugging
+    
+    uvicorn.run(
+        "main:app", 
+        host="0.0.0.0",
+        port=port,
+        workers=1
+    )

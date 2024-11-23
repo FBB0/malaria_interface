@@ -61,53 +61,56 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
 @app.post("/upload_image/")
 async def upload_image(file: UploadFile = File(...)):
     try:
-        logger.info(f"Processing upload: {file.filename}, size: {file.size} bytes")
+        logger.info(f"Received file upload: {file.filename}")
+        contents = await file.read()
+        logger.info(f"File size: {len(contents)} bytes")
         
-        # Read file with a timeout
-        contents = await asyncio.wait_for(file.read(), timeout=60)
-        
-        # Process image
         image = Image.open(io.BytesIO(contents)).convert("RGB")
-        logger.info(f"Image opened: {image.size}")
-        
-        # Convert original image to base64
+        logger.info(f"Image opened successfully: {image.size}")
+
+        # Convert original image to base64 before drawing boxes
         buffered = io.BytesIO()
-        image.save(buffered, format="JPEG", quality=85)  # Reduced quality
+        image.save(buffered, format="JPEG")
         base_img_str = base64.b64encode(buffered.getvalue()).decode()
-        
-        # YOLO detection
-        logger.info("Starting detection")
+        logger.info("Original image converted to base64")
+
+        # Store original image as numpy array for thumbnails
+        base_image_np = np.array(image)
+
+        # Perform YOLO detection
+        logger.info("Starting YOLO detection")
         results = model.predict(image, save=False, stream=False)
-        logger.info("Detection complete")
+        logger.info(f"YOLO detection completed: {len(results)} results")
         
-        # Process results
+        # Get inference speed from results
         speed = results[0].speed['inference']
-        image_with_boxes, detections = draw_bounding_boxes(image, np.array(image), results)
         
-        # Convert result image
+        # Draw bounding boxes on the image
+        image_with_boxes, detections = draw_bounding_boxes(image, base_image_np, results)
+        logger.info(f"Generated {len(detections)} detections")
+
+        # Convert annotated image to base64 for frontend
         buffered = io.BytesIO()
-        image_with_boxes.save(buffered, format="JPEG", quality=85)
+        image_with_boxes.save(buffered, format="JPEG")
         img_str = base64.b64encode(buffered.getvalue()).decode()
-        
-        logger.info(f"Processed {len(detections)} detections")
-        
-        return {
+
+        response_data = {
             "img_data": img_str,
             "base_img_data": base_img_str,
             "detections": detections,
             "speed": f"{round(speed, 2)}ms"
         }
-        
-    except asyncio.TimeoutError:
-        logger.error("Request timed out")
-        raise HTTPException(status_code=504, detail="Processing timed out")
+        logger.info("Sending response back to client")
+        return JSONResponse(response_data)
+
     except Exception as e:
-        logger.error(f"Error: {str(e)}")
+        logger.error(f"Error processing image: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-        
+
 def draw_bounding_boxes(image, base_image_np, results):
     """
     Draws bounding boxes and returns the image with boxes and cropped thumbnails.

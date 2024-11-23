@@ -24,14 +24,23 @@ import os
 
 app = FastAPI()
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins in development
+    allow_origins=[
+        "https://malaria-interface.onrender.com",
+        "http://localhost:5173",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
+@app.options("/upload_image/")
+async def options_upload():
+    return {"message": "OK"}
 # Add debug endpoint
 @app.get("/debug/cors")
 async def debug_cors():

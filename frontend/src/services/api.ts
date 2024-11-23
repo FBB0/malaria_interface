@@ -1,6 +1,5 @@
 import axios from 'axios';
 
-// Types for our API responses
 export interface Detection {
   label: string;
   confidence: string;
@@ -14,13 +13,12 @@ export interface DetectionResponse {
   speed: string;
 }
 
-const baseURL = import.meta.env.PROD 
-  ? 'https://epoch-malaria-detection.onrender.com'
-  : 'http://localhost:8000';  // Direct connection to backend in development
+// Production URL for the backend
+const baseURL = 'https://epoch-malaria-detection.onrender.com';
 
 const api = axios.create({
   baseURL,
-  timeout: 60000,  // Increased timeout for large images
+  timeout: 60000,
 });
 
 export const apiService = {
@@ -34,13 +32,14 @@ export const apiService = {
       const response = await api.post('/upload_image/', formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
-        },
-        onUploadProgress: (progressEvent) => {
-          console.log('Upload progress:', progressEvent); // Debug log
+          'Accept': 'application/json',
         },
       });
 
-      console.log('Upload response:', response); // Debug log
+      if (!response.data) {
+        throw new Error('No response data received');
+      }
+
       return response.data;
     } catch (error) {
       console.error('Upload Error Details:', {
@@ -49,8 +48,9 @@ export const apiService = {
         response: axios.isAxiosError(error) ? error.response?.data : null,
       });
 
-      if (axios.isAxiosError(error) && error.response) {
-        throw new Error(`Upload failed: ${error.response.data.detail || error.message}`);
+      if (axios.isAxiosError(error)) {
+        const message = error.response?.data?.detail || error.message;
+        throw new Error(`Upload failed: ${message}`);
       }
       throw new Error('Network error or server is not responding');
     }

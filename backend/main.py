@@ -11,11 +11,8 @@
 # Below is the full code for each file required for the Malaria Detection App.
 
 # main.py
-
 from fastapi import FastAPI, File, UploadFile, Request, HTTPException
 from fastapi.responses import JSONResponse
-from fastapi.templating import Jinja2Templates
-from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from ultralytics import YOLO
 from PIL import Image
@@ -23,29 +20,33 @@ import io
 import cv2
 import numpy as np
 import base64
+import os
 
 app = FastAPI()
 
+# CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Temporarily allow all origins for testing
+    allow_origins=[
+        "http://localhost:5173",
+        "https://malaria-interface.onrender.com",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 # Initialize YOLO model
 try:
-    model = YOLO('best_yolo.pt')  # make sure this path is correct
+    model = YOLO('best_yolo.pt')
 except Exception as e:
     print(f"Error loading model: {e}")
     model = None
 
-# API endpoints
-
-# Add a root endpoint for health checks
 @app.get("/")
 async def root():
     return {"status": "healthy"}
+
 
 
 
@@ -133,16 +134,17 @@ def draw_bounding_boxes(image, base_image_np, results):
 
 if __name__ == "__main__":
     import uvicorn
-    import os
     
     # Get port from environment variable
     port = int(os.environ.get("PORT", 8000))
     
-    print(f"Starting server on port {port}")  # Add this for debugging
+    print(f"Starting server on port {port}")
     
     uvicorn.run(
-        "main:app", 
+        "main:app",
         host="0.0.0.0",
         port=port,
-        workers=1
+        workers=1,
+        log_level="info"
+    
     )

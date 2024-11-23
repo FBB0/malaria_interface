@@ -43,19 +43,30 @@ export default function Home() {
   const handleSampleSelect = async (sampleNumber: number) => {
     try {
       setShowSampleMenu(false);
-      const samplePath = import.meta.env.DEV 
-        ? `/src/assets/samples/sample_${sampleNumber}.jpg`
-        : `/assets/samples/sample_${sampleNumber}.jpg`;
+      setLoading(true);
+      setError(null);
+      
+      // Update the path to match your public/assets/samples structure
+      const samplePath = `/assets/samples/sample_${sampleNumber}.jpg`;
+      
+      console.log('Loading sample from:', samplePath); // Debug log
+      
       const response = await fetch(samplePath);
+      if (!response.ok) {
+        throw new Error(`Failed to load sample image: ${response.statusText}`);
+      }
+      
       const blob = await response.blob();
       const file = new File([blob], `sample_${sampleNumber}.jpg`, { type: 'image/jpeg' });
+      
       await handleFileUpload(file);
     } catch (err) {
-      setError('Failed to load sample image');
-      console.error('Error:', err);
+      console.error('Sample loading error:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load sample image');
+    } finally {
+      setLoading(false);
     }
   };
-
   return (
     <div className="min-h-screen bg-gray-50" style={{
       backgroundImage: "url('/Epoch_Background_Light.jpg')",

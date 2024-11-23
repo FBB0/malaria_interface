@@ -1,4 +1,4 @@
-import axios, { AxiosResponse } from 'axios';
+import axios from 'axios';
 
 // Types for our API responses
 export interface Detection {
@@ -9,18 +9,14 @@ export interface Detection {
 
 export interface DetectionResponse {
   img_data: string;
-  base_img_data: string; // Add this line
+  base_img_data: string;
   detections: Detection[];
   speed: string;
 }
 
-// import axios, { AxiosResponse } from 'axios';
-
-
-
 const baseURL = import.meta.env.PROD 
   ? 'https://epoch-malaria-detection.onrender.com'
-  : '/api';
+  : 'http://localhost:8000';  // Changed from '/api' to direct localhost URL
 
 const api = axios.create({
   baseURL,
@@ -48,4 +44,5 @@ export const apiService = {
     }
   },
 };
+
 export default apiService;

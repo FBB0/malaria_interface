@@ -29,13 +29,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:5173",
-        "https://malaria-interface.onrender.com",
-        "*"  # Temporarily allow all origins for testing
+        "https://malaria-interface.onrender.com"
     ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
-    expose_headers=["*"]
 )
 
 # Add debug endpoint
@@ -62,7 +60,7 @@ async def root():
 
 
 
-@app.post("/api/upload_image/")
+@app.post("/upload_image/")
 async def upload_image(file: UploadFile = File(...)):
     try:
         contents = await file.read()

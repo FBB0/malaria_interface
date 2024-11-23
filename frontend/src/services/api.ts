@@ -13,17 +13,15 @@ export interface DetectionResponse {
   speed: string;
 }
 
-// Use environment-specific base URL
 const baseURL = import.meta.env.PROD 
-  ? 'https://epoch-malaria-detection.onrender.com'  // Production backend
-  : 'http://localhost:8000';  // Local development
+  ? 'https://epoch-malaria-detection.onrender.com'
+  : 'http://localhost:8000';
 
 const api = axios.create({
   baseURL,
-  timeout: 120000,  // 2 minutes timeout for production
-  headers: {
-    'Accept': 'application/json',
-  }
+  timeout: 300000, // 5 minutes timeout for production
+  maxContentLength: Infinity,
+  maxBodyLength: Infinity,
 });
 
 export const apiService = {
@@ -32,8 +30,10 @@ export const apiService = {
     formData.append('file', file);
 
     try {
-      console.log('Environment:', import.meta.env.MODE);
-      console.log('Uploading to:', `${baseURL}/upload_image/`);
+      // First verify the server is responsive
+      await api.get('/health');
+      
+      console.log('Starting upload:', file.name, 'Size:', file.size);
       
       const response = await api.post('/upload_image/', formData, {
         headers: {
@@ -47,11 +47,19 @@ export const apiService = {
 
       return response.data;
     } catch (error) {
-      console.error('Upload failed:', error);
-      if (axios.isAxiosError(error) && error.response) {
-        throw new Error(`Server error: ${error.response.data.detail || error.message}`);
+      console.error('Upload Error:', error);
+      
+      if (axios.isAxiosError(error)) {
+        if (error.code === 'ECONNABORTED') {
+          throw new Error('Request timed out. The server is taking too long to respond.');
+        }
+        if (!error.response) {
+          throw new Error('Network error. The server may be down or restarting.');
+        }
+        throw new Error(error.response.data?.detail || 'Server error occurred');
       }
-      throw new Error('Connection failed. Please try again later.');
+      
+      throw new Error('An unexpected error occurred');
     }
   },
 };

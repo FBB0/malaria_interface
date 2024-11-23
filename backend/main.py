@@ -27,17 +27,19 @@ import base64
 app = FastAPI()
 
 # Add CORS middleware
+from fastapi.middleware.cors import CORSMiddleware
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:5173",  # Vite's default dev port
-        "https://epoch-malaria-detection.onrender.com",  # Your production frontend domain
+        "http://localhost:5173",  # Local development
+        "https://malaria-interface.onrender.com",  # Your frontend Render URL
+        "https://epoch-malaria-detection.onrender.com"  # Your backend URL
     ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 # Initialize YOLO model
 try:
     model = YOLO('best_yolo.pt')  # make sure this path is correct

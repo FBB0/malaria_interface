@@ -1,24 +1,18 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import path from 'path'
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
   plugins: [react()],
   server: {
-    proxy: {
+    proxy: mode === 'development' ? {
       '/api': {
-        target: process.env.VITE_API_URL || 'http://localhost:8000',
-        rewrite: (path) => path.replace(/^\/api/, ''),
+        target: 'http://localhost:8000',
         changeOrigin: true,
+        rewrite: (path) => path.replace(/^\/api/, ''),
       },
-    },
+    } : undefined,
   },
-  build: {
-    assetsDir: 'assets',
-    rollupOptions: {
-      input: {
-        main: path.resolve(__dirname, 'index.html'),
-      },
-    },
+  define: {
+    'process.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL),
   },
-});
+}));

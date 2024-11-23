@@ -15,8 +15,12 @@ export interface DetectionResponse {
 }
 
 // Create axios instance with default config
+const baseURL = import.meta.env.PROD 
+  ? 'https://epoch-malaria-detection.onrender.com'
+  : '/api';
+
 const api = axios.create({
-  baseURL: '/api',  // Keep this simple - the proxy will handle the routing
+  baseURL,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -28,13 +32,16 @@ export const apiService = {
     formData.append('file', file);
 
     try {
-      const response: AxiosResponse<DetectionResponse> = await api.post('/api/upload_image/', formData, {
+      // Remove the '/api' prefix in production
+      const endpoint = import.meta.env.PROD ? '/upload_image/' : '/api/upload_image/';
+      const response: AxiosResponse<DetectionResponse> = await api.post(endpoint, formData, {
         headers: {
           'Content-Type': 'multipart/form-data',
         },
       });
       return response.data;
     } catch (error) {
+      console.error('API Error:', error);  // Better error logging
       if (axios.isAxiosError(error)) {
         throw new Error(error.response?.data?.detail || 'Error uploading image');
       }

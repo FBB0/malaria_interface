@@ -43,6 +43,6 @@
 
 body {
   font-family: 'PlusJakartaSans', sans-serif;
-  background-image: url('/public/Epoch_Background_Light.jpg');
+  background-image: url('/Epoch_Background_Light.jpg');
   background-size: cover;
 }

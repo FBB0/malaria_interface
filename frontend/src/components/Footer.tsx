@@ -34,7 +34,7 @@ const Footer: React.FC = () => {
           {/* Logo */}
           <div>
             <img 
-              src="/src/assets/Epoch_Logo_Light.png" 
+              src="/assets/Epoch_Logo_Light.png" 
               alt="Epoch Logo" 
               className="h-8"
             />

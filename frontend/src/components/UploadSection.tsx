@@ -86,7 +86,7 @@ export default function UploadSection({
                     role="menuitem"
                   >
                     <img 
-                      src={`/src/assets/samples/sample_${sample}.jpg`}
+                      src={`/assets/samples/sample_${sample}.jpg`}
                       alt={`Sample ${sample}`}
                       className="w-12 h-12 object-cover rounded"
                     />

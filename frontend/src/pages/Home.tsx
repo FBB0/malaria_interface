@@ -39,7 +39,7 @@ export default function Home() {
       setLoading(false);
     }
   };
-
+  
   const handleSampleSelect = async (sampleNumber: number) => {
     try {
       setShowSampleMenu(false);

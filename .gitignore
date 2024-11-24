@@ -1,7 +1,7 @@
 yolov5s.pt
 best11m.pt
 __pycache__
- 
+ .env*
 # Dependencies
 /node_modules
 /.pnp

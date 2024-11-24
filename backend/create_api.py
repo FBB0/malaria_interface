@@ -86,7 +86,7 @@ def process_results(results) -> List[Dict[str, Union[str, float, List[int]]]]:
     memory=4096
 )
 def run_yolo_inference(image_bytes: bytes) -> Dict:
-    """Run YOLO model inference on the input image and return serializable results."""
+    """Run YOLO model inference on the input image and return serializable results with detections mapped back to the original image size."""
     try:
         model_file_path = '/model/best_yolo.pt'
         if not os.path.exists(model_file_path):
@@ -94,18 +94,24 @@ def run_yolo_inference(image_bytes: bytes) -> Dict:
 
         # Load the YOLO model
         model = YOLO(model_file_path)
-        
-        # Force CUDA usage
-        model.to('cuda')
-        logger.info("Using device: cuda")
-        
+
+        # Force CUDA usage if available
+        if torch.cuda.is_available():
+            device = 'cuda'
+            model.to(device)
+            logger.info("Using device: cuda")
+        else:
+            device = 'cpu'
+            model.to(device)
+            logger.info("Using device: cpu")
+
         # Process image
         image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
-        
+        original_width, original_height = image.size
+        logger.info(f"Original image size: {original_width}x{original_height}")
+
         # Resize image while maintaining aspect ratio
         target_size = (1280, 1280)
-        original_width, original_height = image.size
-        
         aspect_ratio = original_width / original_height
         if aspect_ratio > 1:
             new_width = target_size[0]
@@ -113,35 +119,69 @@ def run_yolo_inference(image_bytes: bytes) -> Dict:
         else:
             new_height = target_size[1]
             new_width = int(target_size[0] * aspect_ratio)
-            
-        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
-        
-        # Add padding
+
+        image_resized = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        logger.info(f"Resized image size: {new_width}x{new_height}")
+
+        # Add padding to create a 1280x1280 image
         new_image = Image.new("RGB", target_size, (0, 0, 0))
         paste_x = (target_size[0] - new_width) // 2
         paste_y = (target_size[1] - new_height) // 2
-        new_image.paste(image, (paste_x, paste_y))
-        
+        new_image.paste(image_resized, (paste_x, paste_y))
+        logger.info(f"Image padded to target size: {target_size}")
+
         # Convert to numpy array
         img_array = np.array(new_image)
-        
+
         # Run inference
         results = model.predict(
             source=img_array,
-            device='cuda',
+            device=device,
             save=False,
             stream=False
         )
-        
-        # Process results into serializable format
-        detections = process_results(results)
-        
+
+        # Process results to convert coordinates back to original image dimensions
+        detections = []
+        for result in results:
+            for box in result.boxes:
+                # Original bounding box coordinates in the resized/padded image
+                x_min, y_min, x_max, y_max = box.xyxy[0].cpu().numpy()
+
+                # Adjust for padding
+                x_min -= paste_x
+                x_max -= paste_x
+                y_min -= paste_y
+                y_max -= paste_y
+
+                # Scale back to original image dimensions
+                x_min = int((x_min / new_width) * original_width)
+                x_max = int((x_max / new_width) * original_width)
+                y_min = int((y_min / new_height) * original_height)
+                y_max = int((y_max / new_height) * original_height)
+
+                # Convert confidence to Python float
+                confidence = float(box.conf[0].cpu().numpy())
+
+                # Get class label
+                class_id = int(box.cls[0].cpu().numpy())
+                label = result.names[class_id]
+
+                # Append detection info
+                detections.append({
+                    "label": label,
+                    "confidence": f"{confidence * 100:.2f}",
+                    "coordinates": [x_min, y_min, x_max, y_max]
+                })
+
+        logger.info(f"Detections processed: {len(detections)} detections found")
+
         return {"status": "success", "detections": detections}
-        
+
     except Exception as e:
         logger.error(f"Error in YOLO inference: {str(e)}")
         return {"status": "error", "message": str(e)}
-
+        
 @fastapi_app.get("/health")
 async def health_check():
     """Health check endpoint."""

@@ -1,173 +1,182 @@
-# Directory Structure:
-# malaria_interface/
-# ├── main.py
-# ├── templates/
-# │   └── index.html
-# ├── static/
-# │   ├── styles.css
-# │   └── images/
-# │       └── sample_image.jpg
-
-# Below is the full code for each file required for the Malaria Detection App.
-
-# main.py
-from fastapi import FastAPI, File, UploadFile, Request, HTTPException
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-from ultralytics import YOLO
-from PIL import Image
-import io
-import cv2
-import numpy as np
-import base64
-import os
-
-app = FastAPI()
-
-from fastapi.middleware.cors import CORSMiddleware
-
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
-        "https://malaria-interface.onrender.com",  # Production frontend
-        "http://localhost:5173",  # Local development
-    ],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
-    allow_headers=["*"],
-)
-
-# Add a health check endpoint
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy", "environment": "production"}
-
-# Initialize YOLO model
-try:
-    model = YOLO('best_yolo.pt')
-except Exception as e:
-    print(f"Error loading model: {e}")
-    model = None
-
-@app.get("/")
-async def root():
-    return {"status": "healthy"}
-
-
-
-
+import modal
 import logging
+from pathlib import Path
+from PIL import Image
+import numpy as np
+from ultralytics import YOLO
+from fastapi import FastAPI, Request
+import torch
+import io
+import os
+from typing import Dict, List, Union
 
+# Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-@app.post("/upload_image/")
-async def upload_image(file: UploadFile = File(...)):
+# Define the Modal image with all required dependencies
+image = (
+    modal.Image.debian_slim()
+    .apt_install("libgl1", "libglib2.0-0")  # Install dependencies
+    .pip_install(
+        "ultralytics",
+        "Pillow",
+        "numpy",
+        "fastapi",
+        "torchvision"
+    )
+)
+
+# Set up Modal app with the defined image
+app = modal.App("malaria-detection-api", image=image)
+
+# Define the volume and its mount path
+volume = modal.Volume.from_name("malaria-model-volume")
+volume_path = Path("/model")
+
+# FastAPI app for endpoints
+fastapi_app = FastAPI()
+
+@fastapi_app.get("/")
+async def root():
+    """Root endpoint."""
+    return {"message": "Malaria Detection API is running. Use /upload_image to process images or /health for a health check."}
+
+@app.function(volumes={str(volume_path): volume})
+def verify_model_exists():
+    """Verify that the model file exists in the volume"""
+    model_file_path = volume_path / 'model/best_yolo.pt'
+    if not model_file_path.exists():
+        raise Exception("Model file not found in volume")
+    logger.info("Model file verified in volume")
+
+def process_results(results) -> List[Dict[str, Union[str, float, List[int]]]]:
+    """Process YOLO results and convert to serializable format"""
+    detections = []
+    
+    # Get the first result
+    result = results[0]
+    
+    # Process each detection
+    for i in range(len(result.boxes)):
+        box = result.boxes[i]
+        # Convert coordinates to CPU and then to Python native types
+        coords = box.xyxy[0].cpu().numpy()
+        x_min, y_min, x_max, y_max = map(int, coords)
+        
+        # Convert confidence to Python float
+        confidence = float(box.conf[0].cpu().numpy())
+        
+        # Get class label
+        class_id = int(box.cls[0].cpu().numpy())
+        label = result.names[class_id]
+        
+        detections.append({
+            "label": label,
+            "confidence": f"{confidence * 100:.2f}",
+            "coordinates": [x_min, y_min, x_max, y_max]
+        })
+    
+    return detections
+
+@app.function(
+    gpu="any",
+    volumes={str(volume_path): volume},
+    timeout=600,
+    memory=4096
+)
+def run_yolo_inference(image_bytes: bytes) -> Dict:
+    """Run YOLO model inference on the input image and return serializable results."""
     try:
-        logger.info(f"Received file upload: {file.filename}")
-        contents = await file.read()
-        logger.info(f"File size: {len(contents)} bytes")
+        model_file_path = '/model/best_yolo.pt'
+        if not os.path.exists(model_file_path):
+            raise Exception("Model file not found in volume")
+
+        # Load the YOLO model
+        model = YOLO(model_file_path)
         
-        image = Image.open(io.BytesIO(contents)).convert("RGB")
-        logger.info(f"Image opened successfully: {image.size}")
-
-        # Convert original image to base64 before drawing boxes
-        buffered = io.BytesIO()
-        image.save(buffered, format="JPEG")
-        base_img_str = base64.b64encode(buffered.getvalue()).decode()
-        logger.info("Original image converted to base64")
-
-        # Store original image as numpy array for thumbnails
-        base_image_np = np.array(image)
-
-        # Perform YOLO detection
-        logger.info("Starting YOLO detection")
-        results = model.predict(image, save=False, stream=False)
-        logger.info(f"YOLO detection completed: {len(results)} results")
+        # Force CUDA usage
+        model.to('cuda')
+        logger.info("Using device: cuda")
         
-        # Get inference speed from results
-        speed = results[0].speed['inference']
+        # Process image
+        image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
         
-        # Draw bounding boxes on the image
-        image_with_boxes, detections = draw_bounding_boxes(image, base_image_np, results)
-        logger.info(f"Generated {len(detections)} detections")
+        # Resize image while maintaining aspect ratio
+        target_size = (1280, 1280)
+        original_width, original_height = image.size
+        
+        aspect_ratio = original_width / original_height
+        if aspect_ratio > 1:
+            new_width = target_size[0]
+            new_height = int(target_size[1] / aspect_ratio)
+        else:
+            new_height = target_size[1]
+            new_width = int(target_size[0] * aspect_ratio)
+            
+        image = image.resize((new_width, new_height), Image.Resampling.LANCZOS)
+        
+        # Add padding
+        new_image = Image.new("RGB", target_size, (0, 0, 0))
+        paste_x = (target_size[0] - new_width) // 2
+        paste_y = (target_size[1] - new_height) // 2
+        new_image.paste(image, (paste_x, paste_y))
+        
+        # Convert to numpy array
+        img_array = np.array(new_image)
+        
+        # Run inference
+        results = model.predict(
+            source=img_array,
+            device='cuda',
+            save=False,
+            stream=False
+        )
+        
+        # Process results into serializable format
+        detections = process_results(results)
+        
+        return {"status": "success", "detections": detections}
+        
+    except Exception as e:
+        logger.error(f"Error in YOLO inference: {str(e)}")
+        return {"status": "error", "message": str(e)}
 
-        # Convert annotated image to base64 for frontend
-        buffered = io.BytesIO()
-        image_with_boxes.save(buffered, format="JPEG")
-        img_str = base64.b64encode(buffered.getvalue()).decode()
+@fastapi_app.get("/health")
+async def health_check():
+    """Health check endpoint."""
+    try:
+        verify_model_exists.remote()
+        return {"status": "healthy", "message": "Model loaded and ready"}
+    except Exception as e:
+        logger.error(f"Health check failed: {str(e)}")
+        return {"status": "unhealthy", "message": str(e)}
 
-        response_data = {
-            "img_data": img_str,
-            "base_img_data": base_img_str,
-            "detections": detections,
-            "speed": f"{round(speed, 2)}ms"
-        }
-        logger.info("Sending response back to client")
-        return JSONResponse(response_data)
+@fastapi_app.post("/upload_image")
+async def upload_image(request: Request):
+    """Endpoint to handle image upload and processing."""
+    try:
+        body = await request.body()
+        logger.info("Received an image for processing")
+
+        # Run inference and get processed results
+        result = run_yolo_inference.remote(body)
+        
+        return result
 
     except Exception as e:
         logger.error(f"Error processing image: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {"status": "error", "message": str(e)}
 
-def draw_bounding_boxes(image, base_image_np, results):
-    """
-    Draws bounding boxes and returns the image with boxes and cropped thumbnails.
-    """
-    detections = []
-    image_np = np.array(image)
+@app.function(image=image)
+@modal.asgi_app()
+def serve():
+    """Serve the FastAPI app."""
+    return fastapi_app
 
-    for result in results:
-        for box in result.boxes:
-            x_min, y_min, x_max, y_max = map(int, box.xyxy[0])
-            confidence = box.conf.item()
-            label = model.names[int(box.cls.item())]
-
-            # Create a cropped thumbnail from the base image
-            cropped_image = base_image_np[y_min:y_max, x_min:x_max]
-            cropped_pil = Image.fromarray(cropped_image)
-            buffered = io.BytesIO()
-            cropped_pil.save(buffered, format="JPEG")
-            thumbnail_str = base64.b64encode(buffered.getvalue()).decode()
-
-            # Append detection info
-            detections.append({
-                "label": label,
-                "confidence": f"{confidence * 100:.2f}",
-                "thumbnail": thumbnail_str
-            })
-
-            # Set color based on label
-            color = (0, 255, 0) if label == "WBC" else (255, 0, 0)  # Green for WBC, Red for trophozoite
-
-            # Draw bounding box
-            cv2.rectangle(image_np, (x_min, y_min), (x_max, y_max), color, 2)
-            # Put label
-            # Draw text with contour effect
-            text = f"{label} {confidence * 100:.2f}%"
-            cv2.putText(image_np, text, (x_min, y_min - 10), 
-                       cv2.FONT_HERSHEY_SIMPLEX, 1.8, (0, 0, 0), 6) # Black outline
-            cv2.putText(image_np, text, (x_min, y_min - 10),
-                       cv2.FONT_HERSHEY_SIMPLEX, 1.8, color, 3) # Colored text
-
-    # Convert back to PIL Image
-    image_with_boxes = Image.fromarray(image_np)
-    return image_with_boxes, detections
-
-if __name__ == "__main__":
-    import uvicorn
-    
-    # Get port from environment variable
-    port = int(os.environ.get("PORT", 8000))
-    
-    print(f"Starting server on port {port}")
-    
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=port,
-        workers=1,
-        log_level="info"
-    
-    )
+@app.local_entrypoint()
+def main():
+    """Main entry point for the application."""
+    logger.info("Starting the malaria detection API")
+    verify_model_exists.remote()
+    logger.info("Malaria detection API is running")

@@ -80,7 +80,7 @@ def process_results(results) -> List[Dict[str, Union[str, float, List[int]]]]:
     return detections
 
 @app.function(
-    gpu="any",
+    gpu="a10g",
     volumes={str(volume_path): volume},
     timeout=600,
     memory=4096

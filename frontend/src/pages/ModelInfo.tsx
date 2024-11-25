@@ -1,9 +1,16 @@
 import { Award, Brain, Clock, Server } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
-import Card from '../components/ui/Card'; // Updated to use your new Card component
+import Card from '../components/ui/Card';
 
-const InfoCard = ({ icon: Icon, title, children }) => (
+// Define type for the InfoCard props
+interface InfoCardProps {
+  icon: React.ComponentType<{ className?: string }>;
+  title: string;
+  children: React.ReactNode;
+}
+
+const InfoCard: React.FC<InfoCardProps> = ({ icon: Icon, title, children }) => (
   <Card className="mb-6">
     <div className="flex items-center gap-4 mb-4">
       <Icon className="h-8 w-8 text-blue-600" />

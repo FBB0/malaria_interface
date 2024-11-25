@@ -1,4 +1,3 @@
-import React from 'react';
 import { Award, Brain, Clock, Server } from 'lucide-react';
 import Header from '../components/Header';
 import Footer from '../components/Footer';

@@ -10,6 +10,7 @@ import base64
 import os
 import requests
 import logging
+import time
 
 app = FastAPI()
 
@@ -57,12 +58,19 @@ async def upload_image(file: UploadFile = File(...)):
         # Store original image as numpy array for thumbnails later
         base_image_np = np.array(image)
 
+        start_time = time.time()
+
         # Send the image to the external YOLO inference API as binary data
         response = requests.post(
             INFERENCE_API_URL,
             data=contents,  # Sending the original image bytes directly
             headers={"Content-Type": "image/jpeg"}
         )
+
+        # End timing the inference
+        end_time = time.time()  # Record the end time
+        inference_time = end_time - start_time  # Calculate the duration
+
 
         # Check if the API call was successful
         if response.status_code != 200:
@@ -78,7 +86,9 @@ async def upload_image(file: UploadFile = File(...)):
         logger.info(f"YOLO detection completed: {len(results['detections'])} results")
 
         # Get inference speed from results (if available)
-        speed = results.get('speed', 'N/A')
+           
+        speed = f"{inference_time:.2f} seconds"  # Format the speed
+
 
         # Draw bounding boxes on the image
         image_with_boxes, detections = draw_bounding_boxes(image, base_image_np, results)
@@ -93,7 +103,7 @@ async def upload_image(file: UploadFile = File(...)):
             "img_data": img_str,
             "base_img_data": base64.b64encode(contents).decode(),  # Using the original content for the base image
             "detections": detections,
-            "speed": f"{speed}ms"
+            "speed": f"{speed}"
         }
         logger.info("Sending response back to client")
         return JSONResponse(response_data)

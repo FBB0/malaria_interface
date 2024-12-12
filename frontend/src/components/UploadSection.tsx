@@ -47,17 +47,6 @@ export default function UploadSection({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap gap-4 relative">
-        {/* File Upload Button */}
-        <label className={`flex-1 min-w-[200px] flex items-center justify-center gap-2 px-6 py-6 rounded-2xl shadow-md hover:shadow-lg cursor-pointer transition-all text-lg ${
-          isUploading ? 'bg-gray-100 text-gray-700' : 'bg-white text-gray-600'
-        }`}>
-          <svg className="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-          </svg>
-          <span className="whitespace-nowrap">Upload file</span>
-          <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
-        </label>
-
         {/* Sample Selection Button and Menu */}
         <div className="relative flex-1 min-w-[200px]">
           <button
@@ -97,6 +86,17 @@ export default function UploadSection({
             </div>
           )}
         </div>
+
+        {/* File Upload Button */}
+        <label className={`flex-1 min-w-[200px] flex items-center justify-center gap-2 px-6 py-6 rounded-2xl shadow-md hover:shadow-lg cursor-pointer transition-all text-lg ${
+          isUploading ? 'bg-gray-100 text-gray-700' : 'bg-white text-gray-600'
+        }`}>
+          <svg className="w-8 h-8 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+          </svg>
+          <span className="whitespace-nowrap">Upload file</span>
+          <input type="file" className="hidden" onChange={handleFileChange} accept="image/*" />
+        </label>
       </div>
     </div>
   );

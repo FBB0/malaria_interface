@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import Header from '../components/Header';
 import UploadSection from '../components/UploadSection';
-import ModelSteps from '../components/ModelSteps';
+// import ModelSteps from '../components/ModelSteps';
 import { DetectionInfoPopover } from '../components/DetectionInfoPopover'
 import { apiService } from '../services/api';
 import Footer from '../components/Footer';
@@ -92,15 +92,15 @@ export default function Home() {
             </div>
 
             <UploadSection
-              onFileUpload={handleFileUpload}
               onSampleSelect={() => setShowSampleMenu(true)}
+              onFileUpload={handleFileUpload}
               showSampleMenu={showSampleMenu}
               onCloseSampleMenu={() => setShowSampleMenu(false)}
               samples={samples}
               onSampleNumberSelect={handleSampleSelect}
             />
 
-            <ModelSteps />
+            {/* <ModelSteps /> */}
 
             {error && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">

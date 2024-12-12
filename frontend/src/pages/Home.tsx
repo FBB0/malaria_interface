@@ -70,14 +70,14 @@ export default function Home() {
     }
   };
   return (
-    <div className="min-h-screen bg-gray-50" style={{
+    <div className="min-h-screen bg-gray-50 flex flex-col" style={{
       backgroundImage: "url('/Epoch_Background_Light.jpg')",
       backgroundSize: 'cover',
       backgroundPosition: 'center'
     }}>
       <Header />
       
-      <main className="container mx-auto px-4 py-8 sm:py-8">
+      <main className="container mx-auto px-4 py-8 sm:py-8 flex-grow">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-8">
           {/* Left Column */}
           <div className="space-y-8 sm:space-y-16">

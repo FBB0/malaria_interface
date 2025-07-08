@@ -27,8 +27,8 @@ image = (
     )
 )
 
-# Set up Modal app with the defined image
-app = modal.App("malaria-detection-api", image=image)
+# Set up Modal app
+app = modal.App("malaria-detection-api")
 
 # Define the volume and its mount path
 volume = modal.Volume.from_name("malaria-model-volume")
@@ -42,7 +42,7 @@ async def root():
     """Root endpoint."""
     return {"message": "Malaria Detection API is running. Use /upload_image to process images or /health for a health check."}
 
-@app.function(volumes={str(volume_path): volume})
+@app.function(image=image, volumes={str(volume_path): volume})
 def verify_model_exists():
     """Verify that the model file exists in the volume"""
     model_file_path = volume_path / 'model/best_yolo.pt'
@@ -80,6 +80,7 @@ def process_results(results) -> List[Dict[str, Union[str, float, List[int]]]]:
     return detections
 
 @app.function(
+    image=image,
     gpu="any",
     volumes={str(volume_path): volume},
     timeout=600,
@@ -208,7 +209,7 @@ async def upload_image(request: Request):
         logger.error(f"Error processing image: {str(e)}")
         return {"status": "error", "message": str(e)}
 
-@app.function()
+@app.function(image=image)
 @modal.asgi_app()
 def serve():
     """Serve the FastAPI app."""

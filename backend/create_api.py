@@ -208,7 +208,7 @@ async def upload_image(request: Request):
         logger.error(f"Error processing image: {str(e)}")
         return {"status": "error", "message": str(e)}
 
-@app.function(image=image)
+@app.function()
 @modal.asgi_app()
 def serve():
     """Serve the FastAPI app."""

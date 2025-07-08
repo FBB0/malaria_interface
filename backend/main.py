@@ -9,6 +9,8 @@ import numpy as np
 import base64
 import os
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 import logging
 
 app = FastAPI()
@@ -57,11 +59,24 @@ async def upload_image(file: UploadFile = File(...)):
         # Store original image as numpy array for thumbnails later
         base_image_np = np.array(image)
 
+        # Create session with retry strategy for better SSL handling
+        session = requests.Session()
+        retry_strategy = Retry(
+            total=3,
+            backoff_factor=1,
+            status_forcelist=[429, 500, 502, 503, 504],
+        )
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+
         # Send the image to the external YOLO inference API as binary data
-        response = requests.post(
+        response = session.post(
             INFERENCE_API_URL,
             data=contents,  # Sending the original image bytes directly
-            headers={"Content-Type": "image/jpeg"}
+            headers={"Content-Type": "image/jpeg"},
+            timeout=30,  # 30 second timeout
+            verify=True  # Enable SSL verification
         )
 
         # Check if the API call was successful
